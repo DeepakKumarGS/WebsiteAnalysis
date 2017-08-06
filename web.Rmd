@@ -1,0 +1,135 @@
+---
+title: "Popular Websites-Analysis"
+author: "Deepak Kumar"
+date: "`r Sys.Date()`"
+output: 
+      html_document:
+      fig_width: 10
+      fig_height: 5
+      toc:  yes
+      number_sections: yes
+      code folding: show 
+      
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This kernel analyses the popular websites across countries based on likes,views per day,child saftey,Trusworthiness among other factors.
+
+```{r}
+setwd("C:/Users/Deepak kumar/Downloads/R/Website Analysis")
+getwd()
+library(ggplot2)
+library(plotly)
+library(stringr)
+library(dplyr)
+library(ggcorrplot)
+library(tidyverse)
+```
+
+# Loading Data:
+
+```{r}
+web=read.csv("Web_Scrapped_websites.csv",stringsAsFactors = FALSE,header=TRUE)
+names(web)
+glimpse(web)
+dim(web)
+```
+
+# Data Cleaning:
+
+There are 9540 observations and 31 columns.There are spaces inbetween the numbers.Lets convert them into num without spaces.
+
+
+```{r}
+web$Avg_Daily_Visitors=as.factor(str_replace_all(web$Avg_Daily_Visitors,fixed(" "),""))
+web$Avg_Daily_Visitors=as.factor(str_replace_all(web$Avg_Daily_Visitors,"NA"," "))
+web$Avg_Daily_Pageviews=as.factor(str_replace_all(web$Avg_Daily_Pageviews,fixed(" "),""))
+web$Avg_Daily_Pageviews=as.factor(str_replace_all(web$Avg_Daily_Pageviews,"NA"," "))
+web$Avg_Daily_Visitors=as.double(web$Avg_Daily_Visitors)
+web$Avg_Daily_Pageviews=as.double(web$Avg_Daily_Pageviews)
+glimpse(web)
+
+```
+
+# Overview:
+
+```{r}
+temp=data.frame(table(web$Child_Safety))
+colnames(temp)=c("Factor","Count")
+ggplot(temp,aes(x=factor(Factor,levels=Factor),y=Count,fill=Factor))+geom_bar(stat="identity")+labs(x="Factor",y="Count")+ggtitle("Count of websites according to Child Saftey factor")
+temp=data.frame(table(web$Trustworthiness))
+colnames(temp)=c("Factor","Count")
+ggplot(temp,aes(x=factor(Factor,levels=Factor),y=Count,fill=Factor))+geom_bar(stat="identity")+labs(x="Factor",y="Count")+ggtitle("Count of websites according to Trustworthiness")
+temp=data.frame(table(web$Privacy))
+colnames(temp)=c("Factor","Count")
+ggplot(temp,aes(x=factor(Factor,levels=Factor),y=Count,fill=Factor))+geom_bar(stat="identity")+labs(x="Factor",y="Count")+ggtitle("Count of websites according to Trustworthiness")
+```
+
+
+
+
+
+#Which country tops web usage?
+
+Based on avg number of visitors to a website, lts rank the top 20 countries to understand which country visits the top 50 popular websites.
+
+```{r}
+temp=web %>% group_by(country) %>% summarise(count=sum(Avg_Daily_Visitors)) %>% arrange(desc(count))
+temp%>% head(20) %>% plot_ly(x=~factor(country,level=country),y=~count,type="bar")%>% layout(title="Avg Visits by Country",xaxis=list(title="Country"),yaxis=list(title="Avg"))
+```
+
+
+# Website Analysis:
+
+> Which website has been consistently rated within number 10  in all countries?
+
+```{r}
+length(unique(web$country))
+temp= web %>% filter(Country_Rank %in% 1:10)  %>% group_by(Website) %>% summarise(count=n()) %>% arrange(desc(count))
+temp %>% head(10) %>% plot_ly(x=~factor(Website,level=Website),y=~count,color="Website",type="bar",mode="markers") %>% layout(xaxis=list(title="Website"),yaxis=list(title="Count of Countries"),title="Top 10 Most visited Website")
+```
+
+
+
+* It isnt surprising going by the list that `google.com` tops in 190 out of 191 countries considered for study followed by `youtube.com` and `facebook.com`.Let us see which country has not ranked `google,youtube and facebook` under top 10.
+
+```{r}
+web %>% select(Website,country,Country_Rank) %>% filter(Website=="www.google.com" & (Country_Rank %in% 11:50))
+web %>% select(Website,country,Country_Rank) %>% filter(Website=="www.youtube.com" & (Country_Rank %in% 11:50))
+web %>% select(Website,country,Country_Rank) %>% filter(Website=="www.facebook.com" & (Country_Rank %in% 11:50))
+```
+
+Let us understand which website is rated in most countries as having excellent child saftey & trustworthiness? 
+
+```{r}
+temp= web %>% filter(Trustworthiness=="Excellent" & Child_Safety=="Excellent") %>% group_by(Website) %>% summarise(count=n()) %>% arrange(desc(count))
+temp %>% head(10) %>%  ggplot(aes(x=factor(Website,levels=Website),y=count,fill=Website))+geom_bar(stat="identity")+theme(axis.text.x=element_text(angle=90),legend.position ="None")+labs(x="Website",y="Count of Countries")+ggtitle("Most trustworthy and child friendly websites across countries")
+```
+
+
+# Which country tops the list with websites under 50 ranks that have excellent trustworthiness,child saftey and privacy ratings?
+
+```{r}
+temp= web%>% filter(Trustworthiness=="Excellent" & Child_Safety=="Excellent" & Privacy == "Excellent") %>% group_by(country) %>% summarise(count=n()) %>% arrange(desc(count))
+q=temp%>% head(20) %>% ggplot(aes(x=factor(country,levels=country),y=count,fill=country))+geom_bar(stat="identity")+theme(axis.text.x=element_text(angle=90),legend.position ="None")+labs(x="Country",y="Count of Countries")+ggtitle("Countries with excellent rating of websites")
+ggplotly(q)
+```
+
+
+
+#Which website dominates the bottom rankings in most of the  countries?
+
+In a simiar manner as we did the top 10 rated websites across countries,we do this for bottom 10 websites to understand the pattern.
+
+```{r}
+temp= web %>% filter(Country_Rank %in% 40:50) %>% group_by(Website) %>% summarise(count=n()) %>% arrange(desc(count))
+temp %>% head(10) %>% plot_ly(x=~factor(Website,level=Website),y=~count,color="Website",type="bar",mode="markers") %>% layout(xaxis=list(title="Website"),yaxis=list(title="Count of Countries"))
+```
+
+
+
+The ratings provides a surprising insight that giants like microsoft,amazon,stackoverflow and linkedin has rating within 40-50 ranks in most of the countries.
+
