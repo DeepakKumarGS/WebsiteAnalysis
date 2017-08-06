@@ -19,8 +19,7 @@ knitr::opts_chunk$set(echo = TRUE)
 This kernel analyses the popular websites across countries based on likes,views per day,child saftey,Trusworthiness among other factors.
 
 ```{r}
-setwd("C:/Users/Deepak kumar/Downloads/R/Website Analysis")
-getwd()
+
 library(ggplot2)
 library(plotly)
 library(stringr)
